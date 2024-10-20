@@ -1,28 +1,25 @@
 """Basic wrappers for some Satisfactory API endpoints"""
-import os
+
 import time
 
 from requests import RequestException, Response, Session
 
-HOST = 'satisfactory.jkcook.casa'
-PORT = 7777
-BASE_URL = f'https://{HOST}:{PORT}/api/v1'
-PASSWORD = os.environ.get('SATISFACTORY_PASSWORD')
-DEFAULT_SAVE = 'satisfactory_backup'
+from .config import CONFIG
+
 SESSION = Session()
 
 
 def api_request(function: str, data: str | dict = None, token: str = None) -> Response:
     """Make an (optionally authenticated) API request"""
-    headers = {'Content-Type': 'application/json'}
+    headers = {"Content-Type": "application/json"}
     if token:
-        headers['Authorization'] = f'Bearer {token}'
-    payload = {'function': function}
+        headers["Authorization"] = f"Bearer {token}"
+    payload = {"function": function}
     if data:
-        payload['data'] = data
+        payload["data"] = data
 
     response = SESSION.post(
-        BASE_URL,
+        CONFIG.api_url,
         headers=headers,
         json=payload,
         verify=False,
@@ -33,44 +30,47 @@ def api_request(function: str, data: str | dict = None, token: str = None) -> Re
 
 def get_token() -> str:
     response = api_request(
-        'PasswordLogin',
-        {'Password': PASSWORD, 'MinimumPrivilegeLevel': 'Administrator'},
+        "PasswordLogin",
+        {"Password": CONFIG.satisfactory_password, "MinimumPrivilegeLevel": "Administrator"},
     )
-    return response.json()['data']['authenticationToken']
+    return response.json()["data"]["authenticationToken"]
 
 
-def save(token: str, save_name: str = DEFAULT_SAVE) -> Response:
-    return api_request('SaveGame', {'SaveName': save_name}, token)
+def save(token: str, save_name: str = CONFIG.save_name) -> Response:
+    return api_request("SaveGame", {"SaveName": save_name}, token)
 
 
-def get_save(token:str, save_name: str = DEFAULT_SAVE) -> bytes:
+def get_save(token: str, save_name: str = CONFIG.save_name) -> bytes:
     save(token, save_name)
-    response = api_request('DownloadSaveGame', {'SaveName': save_name}, token)
+    response = api_request("DownloadSaveGame", {"SaveName": save_name}, token)
     return response.content
 
 
 def health_check() -> bool:
     try:
-        response = api_request('HealthCheck', {'ClientCustomData': ''})
-        return response.json()['data']['health'] == 'healthy'
+        response = api_request("HealthCheck", {"ClientCustomData": ""})
+        return response.json()["data"]["health"] == "healthy"
     except (RequestException, KeyError):
         return False
 
 
-def get_state(token:str) -> dict:
-    response = api_request('QueryServerState', token=token)
-    return response.json()['data']['serverGameState']
+def get_state(token: str) -> dict:
+    response = api_request("QueryServerState", token=token)
+    return response.json()["data"]["serverGameState"]
 
 
-def restart():
-    """Cleanly restart the server"""
+def restart(token: str):
+    """Shut down the server process and let the service manager restart it"""
+    api_request("Shutdown", token=token)
+
+
+def main():
+    """Save and cleanly restart the server"""
     token = get_token()
     save(token=token)
-    # TODO: Way to check that the save is complete instead of sleep?
-    time.sleep(15)
-    # Shut down the server process and let the service manager restart it
-    api_request('Shutdown', token=token)
+    time.sleep(15)  # TODO: Way to check that the save is complete instead of sleep?
+    restart(token=token)
 
 
-if __name__ == '__main__':
-    restart()
+if __name__ == "__main__":
+    main()
