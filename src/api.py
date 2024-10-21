@@ -41,6 +41,7 @@ def save(token: str, save_name: str = CONFIG.save_name) -> Response:
 
 
 def get_save(token: str, save_name: str = CONFIG.save_name) -> bytes:
+    """Get latest save contents"""
     save(token, save_name)
     response = api_request("DownloadSaveGame", {"SaveName": save_name}, token)
     return response.content
@@ -64,13 +65,12 @@ def restart(token: str):
     api_request("Shutdown", token=token)
 
 
-def main():
+def test_save_restart(token: str):
     """Save and cleanly restart the server"""
-    token = get_token()
     save(token=token)
     time.sleep(15)  # TODO: Way to check that the save is complete instead of sleep?
     restart(token=token)
 
 
 if __name__ == "__main__":
-    main()
+    test_save_restart()
