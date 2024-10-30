@@ -16,6 +16,7 @@ class EnvConfig:
     sync_endpoint = environ.var()
     aws_access_key = environ.var()
     aws_secret_key = environ.var()
+    dry_run = environ.bool_var(default=False)
     log_level = environ.var(default="INFO")
 
     @property
