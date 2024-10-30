@@ -1,11 +1,15 @@
 import time
 import base64
 import json
+from datetime import datetime, timezone
+from logging import getLogger
 from typing import Any
 
 from requests import RequestException, Response, Session
 
 from .config import CONFIG
+
+logger = getLogger(__name__)
 
 
 class SatisfactoryAPIClient:
@@ -51,6 +55,9 @@ class SatisfactoryAPIClient:
     def load(self, save_name: str = CONFIG.save_name) -> Response:
         return self.request("LoadGame", {"SaveName": save_name}, self.token)
 
+    def get_last_modified(self) -> datetime:
+        return self.describe_saves()[0]["saveDateTime"]
+
     def get_save(self, save_name: str = CONFIG.save_name) -> bytes:
         """Get latest save contents"""
         self.save(save_name)
@@ -76,25 +83,38 @@ class SatisfactoryAPIClient:
         return response
 
     def describe_saves(self):
-        """Get info of all saves. Currently assumes just one session.
+        """Get info of all saves, sorted from newest to oldest. Currently assumes just one session.
+
         Example response:
         [ {
             'saveVersion': 46,
             'buildVersion': 372858,
-            'saveName': 'Hoxxes III_autosave_2',
+            'saveName': 'save1_autosave_2',
             'saveLocationInfo': 'SLI_Server',
             'mapName': 'Persistent_Level',
             'mapOptions': '',
-            'sessionName': 'Hoxxes III',
+            'sessionName': 'save1',
             'playDurationSeconds': 159762,
             'saveDateTime': '2024.10.30-00.52.41',
             'isModdedSave': False,
             'isEditedSave': False,
             'isCreativeModeEnabled': False
-        }, ... ]
+          },
+          ...,
+        ]
         """
         response = self.request("EnumerateSessions", token=self.token)
-        return response.json()["data"]["sessions"][0]["SaveHeaders"]
+        saves = response.json()["data"]["sessions"][0]["saveHeaders"]
+        # Convert timestamp strings to datetimes
+        for save in saves:
+            try:
+                dt = datetime.strptime(save["saveDateTime"], "%Y.%m.%d-%H.%M.%S")
+                save["saveDateTime"] = dt.replace(tzinfo=timezone.utc)
+            except ValueError:
+                logger.warning(
+                    f"Failed to parse saveDateTime: {save['saveDateTime']}", exc_info=True
+                )
+        return sorted(saves, key=lambda x: x["saveDateTime"], reverse=True)
 
     def health_check(self) -> bool:
         try:
@@ -104,9 +124,11 @@ class SatisfactoryAPIClient:
             return False
 
     def get_state(self) -> dict[str, Any]:
-        """Get the current server state. Example response:
+        """Get the current server state.
+
+        Example response:
         {
-            'activeSessionName': 'Hoxxes III',
+            'activeSessionName': 'save1',
             'numConnectedPlayers': 0,
             'playerLimit': 6,
             'techTier': 4,
@@ -115,15 +137,17 @@ class SatisfactoryAPIClient:
             'isGameRunning': True,
             'totalGameDuration': 159758,
             'isGamePaused': True,
-            'averageTickRate': 29.768978118896484,
-            'autoLoadSessionName': 'Hoxxes III'
+            'averageTickRate': 29.7,
+            'autoLoadSessionName': 'save1'
         }
         """
         response = self.request("QueryServerState", token=self.token)
         return response.json()["data"]["serverGameState"]
 
     def get_server_options(self):
-        """Get the current server options. Example response:
+        """Get the current server options.
+
+        Example response:
         {
             'FG.DSAutoPause': 'True',
             'FG.DSAutoSaveOnDisconnect': 'True',

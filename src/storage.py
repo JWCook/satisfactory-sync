@@ -1,3 +1,4 @@
+from datetime import datetime
 from tempfile import NamedTemporaryFile
 
 from minio import Minio
@@ -36,6 +37,10 @@ class StorageClient:
                 CONFIG.sync_bucket, f"{CONFIG.save_name}.sav", tmp_file_path=temp_file.name
             )
             return temp_file.read()
+
+    def get_last_modified(self) -> datetime:
+        """Get the last modified timestamp of the save file in the S3-compatible bucket"""
+        return self.stat_save()._last_modified
 
     def stat_save(self):
         """Get the last modified timestamp of the save file in the S3-compatible bucket"""
