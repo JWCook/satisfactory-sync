@@ -5,11 +5,16 @@ from datetime import datetime, timezone
 from logging import getLogger
 from typing import Any
 
+from warnings import simplefilter
+from urllib3.exceptions import InsecureRequestWarning
 from requests import RequestException, Response, Session
 
 from .config import CONFIG
 
 logger = getLogger(__name__)
+
+# Ignore SSL warnings; TODO: set up proper certs
+simplefilter("ignore", InsecureRequestWarning)
 
 
 class SatisfactoryAPIClient:

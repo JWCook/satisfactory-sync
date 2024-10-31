@@ -23,7 +23,7 @@ def sync_save():
     last_saved_local = api_client.get_last_modified()
     last_saved_remote = storage_client.stat_save()._last_modified
     logger.info(
-        f"Changes fetched.\n Local save last modified:  {last_saved_local}\n"
+        f"Changes fetched.\nLocal save last modified:  {last_saved_local}\n"
         + f"Remote save last modified: {last_saved_remote}"
     )
 
