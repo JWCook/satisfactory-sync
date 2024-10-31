@@ -6,7 +6,7 @@ Does not need to run on the same machine as the Satistactory server.
 # Usage
 * `pip install .`
 * Add a `.env` file or set environment variables; see [`.env_sample`](.env_sample)
-* `python -m src.sync`
+* `ficsit-sync`
 
 
 # TODO
