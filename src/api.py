@@ -3,7 +3,7 @@ import base64
 import json
 from datetime import datetime, timezone
 from logging import getLogger
-from typing import Any
+from typing import Any, Optional
 
 from warnings import simplefilter
 from urllib3.exceptions import InsecureRequestWarning
@@ -36,19 +36,24 @@ class SatisfactoryAPIClient:
         )
         return response.json()["data"]["authenticationToken"]
 
-    def request(self, function: str, data: str | dict = None, token: str = None) -> Response:
+    def request(
+        self,
+        function: str,
+        data: Optional[str | dict] = None,
+        token: Optional[str] | None = None,
+    ) -> Response:
         """Make an (optionally authenticated) API request"""
         headers = {"Content-Type": "application/json"}
         if token:
             headers["Authorization"] = f"Bearer {token}"
-        payload = {"function": function}
+        request_body: dict[str, Any] = {"function": function}
         if data:
-            payload["data"] = data
+            request_body["data"] = data
 
         response = self.session.post(
             CONFIG.api_url,
             headers=headers,
-            json=payload,
+            json=request_body,
             verify=False,
         )
         response.raise_for_status()
@@ -137,8 +142,8 @@ class SatisfactoryAPIClient:
             'numConnectedPlayers': 0,
             'playerLimit': 6,
             'techTier': 4,
-            'activeSchematic': "/Script/Engine.BlueprintGeneratedClass'/Game/FactoryGame/Schematics/Progression/Schematic_4-1.Schematic_4-1_C'",
-            'gamePhase': "/Script/FactoryGame.FGGamePhase'/Game/FactoryGame/GamePhases/GP_Project_Assembly_Phase_1.GP_Project_Assembly_Phase_1'",
+            'activeSchematic': "Schematic_4-1.Schematic_4-1_C'",
+            'gamePhase': "GP_Project_Assembly_Phase_1.GP_Project_Assembly_Phase_1'",
             'isGameRunning': True,
             'totalGameDuration': 159758,
             'isGamePaused': True,
@@ -181,4 +186,4 @@ class SatisfactoryAPIClient:
 
 if __name__ == "__main__":
     client = SatisfactoryAPIClient()
-    SatisfactoryAPIClient.test_save_restart()
+    client.test_save_restart()
